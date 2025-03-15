@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Banco Zion</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-image: url('https://img.freepik.com/free-vector/stock-market-trading-graph-background-mutual-fund-commodity_1017-49908.jpg');
+      background-size: cover;
+      background-position: center;
+      margin: 0;
+      padding: 0;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    #login-container, #register-container, #dashboard {
+      max-width: 300px;
+      margin: 100px auto;
+      padding: 20px;
+      background: white;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      border-radius: 10px;
+    }
+
+    input, button {
+      display: block;
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px;
+    }
+
+    button {
+      background-color: #28a745;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #218838;
+    }
+  </style>
+</head>
+<body>
+
+<div id="login-container">
+  <h2>Banco Zion</h2>
+  <input type="text" id="user" placeholder="Usuário">
+  <input type="password" id="password" placeholder="Senha">
+  <button onclick="login()">Entrar</button>
+  <p id="login-error"></p>
+  <p>Não tem uma conta? <a href="#" onclick="showRegister()">Cadastre-se</a></p>
+</div>
+
+<div id="register-container" class="hidden">
+  <h2>Criar Conta</h2>
+  <input type="text" id="new-user" placeholder="Usuário">
+  <input type="password" id="new-password" placeholder="Senha">
+  <button onclick="register()">Criar Conta</button>
+  <p id="register-error"></p>
+  <p>Já tem uma conta? <a href="#" onclick="showLogin()">Entrar</a></p>
+</div>
+
+<div id="dashboard" class="hidden">
+  <h2>Bem-vindo, <span id="username"></span>!</h2>
+  <p>Saldo: R$ <span id="balance">5.00</span></p>
+
+  <h3>Operações:</h3>
+  <input type="number" id="amount" placeholder="Digite o valor">
+  <button onclick="deposit()">Depositar</button>
+  <button onclick="withdraw()">Sacar</button>
+
+  <h3>Transferência PIX</h3>
+  <input type="text" id="pix-user" placeholder="Usuário destino">
+  <input type="number" id="pix-amount" placeholder="Valor do PIX">
+  <button onclick="sendPix()">Enviar PIX</button>
+  <p id="pix-error"></p>
+
+  <h3>Extrato:</h3>
+  <ul id="transactions"></ul>
+
+  <button onclick="logout()">Sair</button>
+</div>
+
+<script>
+  let users = {
+    "admin": { password: "1234", balance: 5.00, transactions: [] }
+  };
+
+  function showRegister() {
+    document.getElementById("login-container").classList.add("hidden");
+    document.getElementById("register-container").classList.remove("hidden");
+  }
+
+  function showLogin() {
+    document.getElementById("register-container").classList.add("hidden");
+    document.getElementById("login-container").classList.remove("hidden");
+  }
+
+  function register() {
+    let newUser = document.getElementById("new-user").value;
+    let newPass = document.getElementById("new-password").value;
+
+    if (users[newUser]) {
+      document.getElementById("register-error").innerText = "Usuário já existe!";
+    } else {
+      users[newUser] = { password: newPass, balance: 5.00, transactions: [] };
+      alert("Conta criada com sucesso!");
+      showLogin();
+    }
+  }
+
+  function login() {
+    let user = document.getElementById("user").value;
+    let pass = document.getElementById("password").value;
+
+    if (users[user] && users[user].password === pass) {
+      document.getElementById("login-container").classList.add("hidden");
+      document.getElementById("dashboard").classList.remove("hidden");
+      document.getElementById("username").innerText = user;
+      updateDashboard(user);
+    } else {
+      document.getElementById("login-error").innerText = "Usuário ou senha inválidos!";
+    }
+  }
+
+  function deposit() {
+    let amount = parseFloat(document.getElementById("amount").value);
+    let user = document.getElementById("username").innerText;
+
+    if (amount > 0) {
+      users[user].balance += amount;
+      users[user].transactions.push(`+ R$ ${amount.toFixed(2)} (Depósito)`);
+      updateDashboard(user);
+    }
+  }
+
+  function withdraw() {
+    let amount = parseFloat(document.getElementById("amount").value);
+    let user = document.getElementById("username").innerText;
+
+    if (amount > 0 && amount <= users[user].balance) {
+      users[user].balance -= amount;
+      users[user].transactions.push(`- R$ ${amount.toFixed(2)} (Saque)`);
+      updateDashboard(user);
+    } else {
+      alert("Saldo insuficiente ou valor inválido.");
+    }
+  }
+
+  function sendPix() {
+    let sender = document.getElementById("username").innerText;
+    let receiver = document.getElementById("pix-user").value;
+    let amount = parseFloat(document.getElementById("pix-amount").value);
+
+    if (!users[receiver]) {
+      document.getElementById("pix-error").innerText = "Usuário destino não existe!";
+      return;
+    }
+
+    if (amount > 0 && users[sender].balance >= amount) {
+      users[sender].balance -= amount;
+      users[receiver].balance += amount;
+      users[sender].transactions.push(`- R$ ${amount.toFixed(2)} (PIX para ${receiver})`);
+      users[receiver].transactions.push(`+ R$ ${amount.toFixed(2)} (PIX de ${sender})`);
+      updateDashboard(sender);
+      alert("PIX enviado com sucesso!");
+    } else {
+      document.getElementById("pix-error").innerText = "Saldo insuficiente ou valor inválido!";
+    }
+  }
+
+  function updateDashboard(user) {
+    document.getElementById("balance").innerText = users[user].balance.toFixed(2);
+    let transactionsList = document.getElementById("transactions");
+    transactionsList.innerHTML = "";
+    users[user].transactions.forEach(tx => {
+      let li = document.createElement("li");
+      li.innerText = tx;
+      transactionsList.appendChild(li);
+    });
+  }
+
+  function logout() {
+    document.getElementById("login-container").classList.remove("hidden");
+    document.getElementById("dashboard").classList.add("hidden");
+  }
+</script>
+
+</body>
+</html>
